@@ -1,5 +1,5 @@
 /* ============================================================
- * mykeyboard.c — TECLADO DE SISTEMA do MYWM (v1.0)
+ * mykeyboard.c — TECLADO DE SISTEMA do MYWM (v1.1)
  *
  * O "GBoard" da consola: uma janela especial (is_keyboard) que:
  *   - vive SEMPRE por cima das outras janelas
@@ -11,6 +11,7 @@
  *     à janela ATIVA — ex: o myterm
  *
  * Páginas: ABC | 123/sym (botão "123"/"ABC")
+ * Linha de números (1-0) sempre visível em ambas as páginas
  * Linha de navegação: ESC LT UP DN RT HOME END PGUP PGDN TAB CTL
  *
  * Log: /mnt/sdcard/mywm_kb.log
@@ -79,6 +80,7 @@ static const unsigned char FONT5x7[96][7] = {
 };
 
 /* ---------- páginas ---------- */
+static const char *NUM[10] = {"1","2","3","4","5","6","7","8","9","0"};
 static const char *PG0[30] = {   /* ABC */
     "q","w","e","r","t","y","u","i","o","p",
     "a","s","d","f","g","h","j","k","l",";",
@@ -87,7 +89,7 @@ static const char *PG0[30] = {   /* ABC */
 static const char *PG1[30] = {   /* 123 / sym */
     "`","~","{","}","[","]","<",">","*","&",
     "@","#","$","%","^","+","=","|","\\","_",
-    "(",")",":",";","'","\"","!",".",",","-"
+    "(",")",":","/","'","\"","!",".",",","-"
 };
 
 /* linha de navegação: rótulo + código MYWM_KC_* */
@@ -159,7 +161,7 @@ static int need_render = 1;
 static void build_keys(void)
 {
     n_keys = 0;
-    int rh = FH/5;
+    int rh = FH/6;   /* 6 linhas: chars, números, controlo, navegação */
 
     /* linhas 0-2: letras / símbolos — JUSTAPOSTAS (zero gap) */
     const char **pg = page ? PG1 : PG0;
@@ -174,40 +176,51 @@ static void build_keys(void)
             n_keys++;
         }
 
-    /* linha 3: página / SHIFT / espaço / BSP / ENT (justapostas) */
+    /* linha 3: números 1-0 — sempre visível (kw já = FW/10) */
     int y3 = 3*rh;
-    keys[n_keys].x = 0;       keys[n_keys].y = y3;
+    for (int c = 0; c < 10; c++) {
+        keys[n_keys].x = c*kw;  keys[n_keys].y = y3;
+        keys[n_keys].w = kw;    keys[n_keys].h = rh;
+        keys[n_keys].lbl = NUM[c];
+        keys[n_keys].ch = NUM[c][0];
+        keys[n_keys].act = 0;
+        n_keys++;
+    }
+
+    /* linha 4: página / SHIFT / espaço / BSP / ENT (justapostas) */
+    int y4 = 4*rh;
+    keys[n_keys].x = 0;       keys[n_keys].y = y4;
     keys[n_keys].w = FW/8;    keys[n_keys].h = rh;
     keys[n_keys].lbl = page ? "ABC" : "123";
     keys[n_keys].ch = 0;      keys[n_keys].act = 2; n_keys++;
 
-    keys[n_keys].x = FW/8;    keys[n_keys].y = y3;
+    keys[n_keys].x = FW/8;    keys[n_keys].y = y4;
     keys[n_keys].w = FW/8;    keys[n_keys].h = rh;
     keys[n_keys].lbl = "SHF"; keys[n_keys].ch = 0;
     keys[n_keys].act = 1; n_keys++;
 
-    keys[n_keys].x = FW/4;    keys[n_keys].y = y3;
+    keys[n_keys].x = FW/4;    keys[n_keys].y = y4;
     keys[n_keys].w = FW/2;    keys[n_keys].h = rh;
     keys[n_keys].lbl = "SPC"; keys[n_keys].ch = ' ';
     keys[n_keys].act = 0; n_keys++;
 
-    keys[n_keys].x = 3*FW/4;  keys[n_keys].y = y3;
+    keys[n_keys].x = 3*FW/4;  keys[n_keys].y = y4;
     keys[n_keys].w = FW/8;    keys[n_keys].h = rh;
     keys[n_keys].lbl = "BSP"; keys[n_keys].ch = MYWM_KC_BS;
     keys[n_keys].act = 0; n_keys++;
 
-    keys[n_keys].x = 7*FW/8;  keys[n_keys].y = y3;
+    keys[n_keys].x = 7*FW/8;  keys[n_keys].y = y4;
     keys[n_keys].w = FW - 7*FW/8;   /* última estica até à borda */
     keys[n_keys].h = rh;
     keys[n_keys].lbl = "ENT"; keys[n_keys].ch = MYWM_KC_ENTER;
     keys[n_keys].act = 0; n_keys++;
 
-    /* linha 4: navegação (11 justapostas) */
-    int y4 = 4*rh, kw4 = FW/11;
+    /* linha 5: navegação (11 justapostas; linha estica até ao fundo) */
+    int y5 = 5*rh, kw5 = FW/11;
     for (int i = 0; i < 11; i++) {
-        keys[n_keys].x = i*kw4; keys[n_keys].y = y4;
-        keys[n_keys].w = (i == 10) ? FW - 10*kw4 : kw4;
-        keys[n_keys].h = rh;
+        keys[n_keys].x = i*kw5; keys[n_keys].y = y5;
+        keys[n_keys].w = (i == 10) ? FW - 10*kw5 : kw5;
+        keys[n_keys].h = FH - y5;
         keys[n_keys].lbl = NAV_L[i];
         keys[n_keys].ch = NAV_C[i];
         keys[n_keys].act = 0;
@@ -248,7 +261,7 @@ static void on_stop(int s) { (void)s; g_stop = 1; }
 int main(void)
 {
     lg = fopen("/mnt/sdcard/mywm_kb.log", "w");
-    LOG("=== mykeyboard v1.0 ===\n");
+    LOG("=== mykeyboard v1.1 (linha de números + barra /) ===\n");
 
     signal(SIGTERM, on_stop);
     signal(SIGINT,  on_stop);

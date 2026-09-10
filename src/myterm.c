@@ -220,7 +220,7 @@ static int spawn_pipe_shell(void)
         setenv("TERM", "dumb", 1);
         setenv("HOME", "/mnt/sdcard", 1);
         setenv("PATH", "/bin:/sbin:/usr/bin:/mnt/sdcard/cubegm/usr/bin:/mnt/sdcard/rootfs/usr/bin", 1);
-        execl(SHELL, "sh", NULL);
+        execl(SHELL, "-sh", NULL);   /* argv[0] com '-' = login shell -> le /etc/profile (PATH do user) */
         _exit(127);
     }
     close(inp[0]); close(outp[1]);
