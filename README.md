@@ -17,7 +17,7 @@
 **For Users:**
 Installation is straightforward. Download the files, extract them, and copy everything directly to the root of your SD card. Folders will automatically merge with your existing file structure.
 
-**Compatibility:** the desktop is currently tested only with **TreeFrogUI 1.3.10** (tzubertowski's `treefrogui` branch) — it appears in the **Apps** tab of that version. Older cores (e.g. the frozen `master` branch) do not list standalone apps.
+**Compatibility:** the desktop is currently tested only with **TreeFrogUI 1.0.3** (tzubertowski's `treefrogui` branch) — it appears in the **Apps** tab of that version. Older cores (e.g. the frozen `master` branch) do not list standalone apps.
 
 **For Developers:**
 To compile this project you need the console's toolchain, the base libraries, and a `~/sf3000` working directory:
